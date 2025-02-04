@@ -29,6 +29,7 @@ int main(int argc, char **argv){
 
   int fdsocket;
   int opt = 1;
+  char buffer[BUFSIZ];
 
   if((fdsocket = socket(AF_INET, SOCK_STREAM, 0)) == -1) /* check if fd link to socket is init */
     error_crit("can't initialise fd for the socket");
@@ -54,12 +55,19 @@ int main(int argc, char **argv){
 
   while(1){
     fdclient = accept(fdsocket, (struct sockaddr *) &client_addr, &client_addr_size); /* blocking current thread is stoped */
-    if(fdclient != -1){ /* client connected */
-      char ip[INET_ADDRSTRLEN]; /* 15 + '\0' -> goes to 16 */
-      inet_ntop(AF_INET, &(client_addr.sin_addr), ip, INET_ADDRSTRLEN);
-      printf("fd : %2d, client connected --> %15s:%4d\n", fdclient, ip, client_addr.sin_port);
-      send(fdclient, "testing send from server...\n", strlen("testing send from server...\n"), MSG_DONTWAIT);
-      break;
+    printf("Client connected with a fd: %d\n", fdclient);
+    while(fdclient != -1){ /* a client is connected */
+      int nread = recv(fdclient, buffer, BUFSIZ, 0);
+      if(nread <= 0){ /* connection closed or error */
+        printf("nread code : %d -> Closing client : %d\n", nread, fdclient);
+        close(fdclient);
+        fdclient = -1;
+        break;
+      }
+      //char ip[INET_ADDRSTRLEN]; /* 15 + '\0' -> goes to 16 */
+      //inet_ntop(AF_INET, &(client_addr.sin_addr), ip, INET_ADDRSTRLEN);
+      printf("bytes receives : %2d, client connected on port : --> %4d\n", nread, client_addr.sin_port);
+      send(fdclient, buffer, nread, 0);
     }
   }
 
