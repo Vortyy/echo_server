@@ -1,4 +1,4 @@
 all :
-	clang server.c -o server
+	clang server.c -o server && ./server
 clean : 
 	rm server
