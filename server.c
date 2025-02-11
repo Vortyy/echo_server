@@ -1,5 +1,5 @@
-/* Implement Epoll event sequence
- * Epoll is api provide by kernels to write a non-blocking IO application (also called async now)
+/* Implement Poll event sequence
+ * Poll is api provide by kernels to write a non-blocking IO application (also called async now)
  * see man poll or io_during (called kqueue in BSD, IOCP in Windows) */
 
 #include <string.h>
