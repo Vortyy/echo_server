@@ -1,6 +1,14 @@
-/* Implement Poll event sequence
- * Poll is api provide by kernels to write a non-blocking IO application (also called async now)
- * see man poll or io_during (called kqueue in BSD, IOCP in Windows) */
+/***************************************************************************
+ * Echo Server
+ *
+ * Just simple echo server which handle multiple connection to learn 
+ * Poll api provide by kernels to write a non-blocking IO application 
+ * In this example the server handles 4 clients simultanously (could handle 
+ * lot more but i choose 4 'testing purpose')
+ *
+ * REF :
+ * - man poll or io_during (called kqueue in BSD, IOCP in Windows) 
+ **************************************************************************/
 
 #include <string.h>
 #include <poll.h>
