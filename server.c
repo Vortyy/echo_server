@@ -1,10 +1,8 @@
 /* Implement Epoll event sequence
  * Epoll is api provide by kernels to write a non-blocking IO application (also called async now)
- * see man epoll or io_during (called kqueue in BSD, IOCP in Windows) */
+ * see man poll or io_during (called kqueue in BSD, IOCP in Windows) */
 
-//Simple socket server system --> done
-//Epoll event manager
-
+#include <string.h>
 #include <poll.h>
 #include <arpa/inet.h>
 #include <stdlib.h>
@@ -17,7 +15,7 @@
 
 #define NFDS (sizeof fds / sizeof(fds[0]))
 
-#define SERVER 0
+#define SERVER 0      /* fds server idx */
 #define PORT 8080     /* listening port */
 #define IP INADDR_ANY /* all the listening addr */
 #define BACKLOG 3     /* max pending connection to the socket */
@@ -82,28 +80,32 @@ int main(int argc, char **argv){
 
   printf("fds starting status: \n");
   for(int i=0; i < MAX_FD; i++){
-    printf("fd=%d && events = 0x0%x \n", fds[i].fd, fds[i].events);
+    printf("fd=%d && events = 0x%x \n", fds[i].fd, fds[i].events);
   }
 
+  /* listening loop */
   while(1){
     ready = poll(fds, MAX_FD, -1);
     printf(" Ready: %d \n", ready);
     for(int i = 0; i < MAX_FD; i++){
       if(fds[i].revents != 0){
         printf(" fd=%d events: %x \n", fds[i].fd, fds[i].revents); 
-        if(i == SERVER){ /* server case */
+        if(i == SERVER){        /* server case */
           int fds_i = get_idx(open, MAX_FD);
-          if(fds_i == -1)
-            error_crit("full fd");
-
           int fdclient = accept(fds[SERVER].fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_size);
-          printf("client accepted on fd = %d\n", fdclient);
-          
-          fds[fds_i].fd = fdclient;
-          fds[fds_i].events = POLLIN;
-          open[fds_i] = 1;
+
+          if(fds_i == -1){      /* client full */
+            write(fdclient, "server is full...\n", strlen("server is full...\n"));
+            close(fdclient);
+          } else {              /* adding new client */
+            printf("client accepted on fd = %d\n", fdclient);
+            
+            fds[fds_i].fd = fdclient;
+            fds[fds_i].events = POLLIN;
+            open[fds_i] = 1;
+          }
         }
-        else { /* client case */
+        else {                 /* client case */
           int n = read(fds[i].fd, buffer, BUFSIZ);
           if(n > 0){
             printf(" %d bytes read from %d \n", n, fds[i].fd); 
@@ -119,7 +121,6 @@ int main(int argc, char **argv){
     }
   }
 
-  printf("closing fd socket...\n");
   close(fds[SERVER].fd);
   return 0;
 }
