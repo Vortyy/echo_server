@@ -6,16 +6,34 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/lipgloss"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-//split model each frame got a model then one UI controller handle switch logic
-//Terminal client states
+var (
+	keywordStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("204")).Background(lipgloss.Color("235"))
+	helpStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+)
+
+/* client tui states */
 const (
-	NotConnected = 1
+	NotConnected = 1 
 	Connecting = 2
 	Connected = 3
 )
+
+type (
+	errMsg error
+	connectionMsg struct{} 
+)
+
+/* model */
+type model struct {
+	state 	  int 
+	spinner   spinner.Model
+	textInput textinput.Model
+	err       error
+}
 
 func main() {
 	p := tea.NewProgram(initialModel())
@@ -24,20 +42,9 @@ func main() {
 	}
 }
 
-type (
-	errMsg error
-)
-
-type model struct {
-	state 	  int 
-	spinner   spinner.Model
-	textInput textinput.Model
-	err       error
-}
-
 func initialModel() model {
 	ti := textinput.New()
-	ti.Placeholder = "localhost 8080"
+	ti.Placeholder = "localhost:8080"
 	ti.Focus()
 	ti.CharLimit = 156
 	ti.Width = 20
@@ -50,6 +57,13 @@ func initialModel() model {
 		spinner: sp,
 		textInput: ti,
 		err:       nil,
+	}
+}
+
+func Connect(m) tea.Cmd {
+	return func() tea.Msg {
+		
+		return connectionMsg{} 
 	}
 }
 
@@ -67,7 +81,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case tea.KeyEnter:
 			m.state++
-			return m, m.spinner.Tick
+			return m, Connect 
 		}
 
 	// We handle errors just like any other message
@@ -86,16 +100,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) View() string {
-	var str string
-	switch s := (m.state); s {
-		case NotConnected: 
-			str = fmt.Sprintf( "What's host ip address port?\n\n%s\n\n%s",
-					m.textInput.View(),
-					"(esc to quit)",
-					) + "\n"
-		case Connecting:
-			str = fmt.Sprintf("\n\n %s loading forever now ... press esc to quit\n\n", m.spinner.View())
+func (m model) View() string{
+	if(m.state == Connecting){
+		return ConnectingView(m)
 	}
-	return str
+	return NotConnectedView(m)
+}
+
+func NotConnectedView(m model) string {
+	return fmt.Sprintf("What's host ip address port?\n\n%s\n\n%s",
+					m.textInput.View(),
+					"press esc to quit") + "\n"
+}
+
+func ConnectingView(m model) string {
+	return fmt.Sprintf("\n\n %s wait till connect to %s \n\n", m.spinner.View(), m.textInput.Value()) + "\n"
 }
