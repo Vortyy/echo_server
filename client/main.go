@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"log"
+  "net"
+  "os"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -14,6 +15,9 @@ var (
 	keywordStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("204")).Background(lipgloss.Color("235"))
 	helpStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 )
+
+/* client connection to the tcp server */
+var conn net.Conn
 
 /* client tui states */
 const (
@@ -38,7 +42,8 @@ type model struct {
 func main() {
 	p := tea.NewProgram(initialModel())
 	if _, err := p.Run(); err != nil {
-		log.Fatal(err)
+    fmt.Printf("Got an error : %v\n", err);
+    os.Exit(1)
 	}
 }
 
@@ -53,16 +58,21 @@ func initialModel() model {
 	sp.Spinner = spinner.Line
 
 	return model{
-		state: NotConnected,
-		spinner: sp,
-		textInput: ti,
-		err:       nil,
+		state:      NotConnected,
+		spinner:    sp,
+		textInput:  ti,
+		err:        nil,
 	}
 }
 
-func Connect(m) tea.Cmd {
+/* Connect : tries to establish a tcp connection with argument inside textInput */
+func Connect(m model) tea.Cmd {
 	return func() tea.Msg {
-		
+    var err error
+    conn, err = net.Dial("tcp", m.textInput.Value())
+    if err != nil {
+      return errMsg(err)
+    }
 		return connectionMsg{} 
 	}
 }
@@ -80,14 +90,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			return m, tea.Quit
 		case tea.KeyEnter:
-			m.state++
-			return m, Connect 
+      if(m.state == NotConnected){
+			  return m, Connect(m) 
+      }
 		}
+
+  // Connection succeed
+  case connectionMsg:
+    m.state++
+    return m, m.spinner.Tick  
 
 	// We handle errors just like any other message
 	case errMsg:
 		m.err = msg
-		return m, nil
+		return m, tea.Quit 
 	}
 
 	if(m.state == NotConnected){
@@ -101,6 +117,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string{
+  if m.err != nil {
+    return fmt.Sprintf("\n\nerror -> %v\n\n", m.err) + "\n"
+  }
+
 	if(m.state == Connecting){
 		return ConnectingView(m)
 	}
@@ -114,5 +134,6 @@ func NotConnectedView(m model) string {
 }
 
 func ConnectingView(m model) string {
-	return fmt.Sprintf("\n\n %s wait till connect to %s \n\n", m.spinner.View(), m.textInput.Value()) + "\n"
+  conn.Write([]byte("FuckOff"))
+  return fmt.Sprintf("\n\n %s wait till connect to \n\n", m.spinner.View()) + "\n"
 }
