@@ -15,7 +15,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-//TODO close current connection + align properly
+/* Styling var */
 var (
   keywordStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("204")).Background(lipgloss.Color("235"))
 	helpStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
@@ -24,7 +24,8 @@ var (
   errStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
 )
 
-/* client connection to the tcp server */
+//TODO array to handle multiple connection with tabs
+/* global client connection to the tcp server */
 var conn net.Conn
 
 /* client tui states */
@@ -32,13 +33,14 @@ const (
 	NotConnected = 1 
 	Connecting = 2
 	Connected = 3
+  Closed = -1
 )
 
 type (
 	errMsg error
 	connectionMsg struct{} 
-  sendMsg struct{}
   recvMsg struct{msg string}
+  closeMsg struct{}
 )
 
 /* model */
@@ -123,6 +125,7 @@ func Connect(m model) tea.Cmd {
 	}
 }
 
+/* Send : tries to send a msg to the server and wait/read for the response */
 func Send(m model, send string) tea.Cmd {
   return func() tea.Msg {
     //Send the messages
@@ -144,15 +147,26 @@ func Send(m model, send string) tea.Cmd {
   }
 }
 
+/* Close : tries to close the current opened conn */
+func Close() tea.Msg {
+  err := conn.Close()
+  if err != nil {
+    return errMsg(err)
+  }
+  return closeMsg{}
+}
+
 func (m model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
+/* Update func */
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
   /* this key always quit */
   if msg, ok := msg.(tea.KeyMsg); ok {
     k := msg.String()
-    if k == "esc" || k == "ctrl+c" {
+    if k == "esc" {
+      m.state = Closed
       return m, tea.Quit
     }
   }
@@ -231,6 +245,9 @@ func updateConnected(msg tea.Msg, m model) (tea.Model, tea.Cmd){
       m.textArea.Reset()
       m.viewport.GotoBottom()
       return m, Send(m, str) 
+    case tea.KeyCtrlC:
+      m.state=NotConnected
+      return m, tea.Batch(Close, textinput.Blink)
     }
 
   case recvMsg:
@@ -251,6 +268,11 @@ func (m model) View() string{
   if(m.state == Connected){
     return ConnectedView(m)
   }
+
+  if(m.state == Closed){
+    return ClosingView() 
+  }
+
 	return NotConnectedView(m)
 }
 
@@ -268,7 +290,7 @@ func NotConnectedView(m model) string {
   str += m.textInput.View()
   str += "\n\n"
 
-  str += helpStyle.Render(" 󰌑 : to start connection • ctrl+c, q: exit")
+  str += helpStyle.Render(" 󰌑 : to start connection • esc: exit")
   
   return str + "\n"
 }
@@ -285,6 +307,10 @@ func ConnectedView(m model) string {
   str += m.viewport.View()
   str += "\n\n"
   str += m.textArea.View()
-  str += "\n\n" + helpStyle.Render(" 󰌑 : send a msg •  , : move along viewport • ctrl+c, q: exit")
+  str += "\n\n" + helpStyle.Render(" 󰌑 : send a msg •  , : move along viewport • esc: exit • ctrl+c: close connection")
   return str
+}
+
+func ClosingView() string {
+  return fmt.Sprintf("Bye Bye ;)\n")
 }
