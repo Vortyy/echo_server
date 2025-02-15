@@ -10,6 +10,7 @@
  * - man poll or io_during (called kqueue in BSD, IOCP in Windows) 
  **************************************************************************/
 
+#include <signal.h>
 #include <string.h>
 #include <poll.h>
 #include <arpa/inet.h>
@@ -27,9 +28,15 @@
 #define PORT 8080     /* listening port */
 #define IP INADDR_ANY /* all the listening addr */
 #define BACKLOG 3     /* max pending connection to the socket */
-#define MAX_FD 5      /* max fd open and checked for poll */
+#define MAX_FD 2      /* max fd open and checked for poll */
 
 struct pollfd fds[MAX_FD]; /* list of fd checked */
+static volatile sig_atomic_t keep_running = 1; /* boolean used in while loop for the server */
+
+/* interruption_handler: is an handler that catch a ctrl+c (a.k.a SIGINT) and stop the while */
+void interruption_handler(int signo){
+  keep_running = 0;
+}
 
 /* error_crit: write an error msg and exit the process */
 void error_crit(char *msg){
@@ -37,12 +44,12 @@ void error_crit(char *msg){
   exit(1);
 }
 
-/* get_index: get first index not used or -1 if its full */
-int get_idx(char *open, int size){
-  int j = 0;
-  while(open[j] == 1 && j < size)
+/* get_index: get first index not used in fds or -1 if its full */
+int get_idx(){
+  int j = 1; /* because 0 is the server idx in fds */
+  while(fds[j].fd != 0 && j < MAX_FD)
     j++;
-  return (j == size) ? -1 : j;
+  return (j == MAX_FD) ? -1 : j;
 }
 
 /* reset_pollfd: with an list fds and index inside this list reset the specific index */
@@ -56,11 +63,19 @@ void reset_pollfd(int idx){
 }
 
 int main(int argc, char **argv){
+
+  /* signal action creation */
+  struct sigaction act = { 0 };
+  act.sa_handler = interruption_handler;
+
+  /* here (signo, act, oldact) -> oldact is usefull to keep the previous interruption 
+   * action to be able to switch from the new one to old one in the program 
+   * (cf. https://stackoverflow.com/questions/3635221/what-is-the-use-of-second-structureoldact-in-sigaction */
+  sigaction(SIGINT, &act, NULL);
+
   struct sockaddr_in addr = {.sin_family=AF_INET, .sin_addr=IP, .sin_port=htons(PORT)}; /* set my address */
 
   int opt;
-  char open[MAX_FD] = {1, 0, 0, 0, 0};
-  char buffer[BUFSIZ];
 
   if((fds[SERVER].fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1) /* check if fd link to socket is init and set it as non-blocking */
     error_crit("can't initialise fd for the socket");
@@ -88,18 +103,22 @@ int main(int argc, char **argv){
 
   printf("fds starting status: \n");
   for(int i=0; i < MAX_FD; i++){
-    printf("fd=%d && events = 0x%x \n", fds[i].fd, fds[i].events);
+    printf(" • fd=%d && events = 0x%x \n", fds[i].fd, fds[i].events);
   }
 
+  char buffer[BUFSIZ]; /* that serve to read input from client */
   /* listening loop */
-  while(1){
+  while(keep_running){
     ready = poll(fds, MAX_FD, -1);
-    printf(" Ready: %d \n", ready);
+    
+    if(ready > 0)
+      printf(" Ready: %d \n", ready);
+
     for(int i = 0; i < MAX_FD; i++){
       if(fds[i].revents != 0){
         printf(" fd=%d events: %x \n", fds[i].fd, fds[i].revents); 
         if(i == SERVER){        /* server case */
-          int fds_i = get_idx(open, MAX_FD);
+          int fds_i = get_idx();
           int fdclient = accept(fds[SERVER].fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_size);
 
           if(fds_i == -1){      /* client full */
@@ -110,7 +129,6 @@ int main(int argc, char **argv){
             
             fds[fds_i].fd = fdclient;
             fds[fds_i].events = POLLIN;
-            open[fds_i] = 1;
           }
         }
         else {                 /* client case */
@@ -122,13 +140,20 @@ int main(int argc, char **argv){
             printf(" Closing --> client fd=%d\n", fds[i].fd);
             close(fds[i].fd);
             reset_pollfd(i);
-            open[i] = 0;
           }
         }
       }
     }
   }
 
+  /* closing opened clients */
+  printf("\nClosing opened clients...\n"); // \n because SIGINT not \n
+  for (int i = 1; i < MAX_FD; i++)
+    if(fds[i].fd != 0)
+      close(fds[i].fd);
+
+  /* closing server */
+  printf("Closing server...\n");
   close(fds[SERVER].fd);
   return 0;
 }

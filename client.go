@@ -96,7 +96,6 @@ func initialModel() model {
   ta.KeyMap.InsertNewline.SetEnabled(false)
 
   vp := viewport.New(50, 5)
-  vp.SetContent("Welcome from server")
 
 	return model{
 		state:      NotConnected,
@@ -201,6 +200,7 @@ func updateNotConnected(msg tea.Msg, m model) (tea.Model, tea.Cmd){
 func updateConnecting(msg tea.Msg, m model) (tea.Model, tea.Cmd){
   switch msg := msg.(type) {
     case connectionMsg:
+      m.messages = nil /* reset previous messages connection */ 
       m.state++
       return m, tea.Batch(textarea.Blink, tea.WindowSize())  
 
@@ -233,6 +233,8 @@ func updateConnected(msg tea.Msg, m model) (tea.Model, tea.Cmd){
     m.viewport.Height = msg.Height - m.textArea.Height() - lipgloss.Height("\n\n\n\n") //gap + helpline + connectedline
     if len(m.messages) > 0 {
       m.viewport.SetContent(lipgloss.NewStyle().Width(m.viewport.Width).Render(strings.Join(m.messages, "\n")))
+    } else {
+      m.viewport.SetContent("send something...")
     }
     m.viewport.GotoBottom()
 
@@ -254,6 +256,10 @@ func updateConnected(msg tea.Msg, m model) (tea.Model, tea.Cmd){
     m.messages = append(m.messages, msg.msg) 
     m.viewport.SetContent(lipgloss.NewStyle().Width(m.viewport.Width).Render(strings.Join(m.messages, "\n")))
     m.viewport.GotoBottom()
+
+  case errMsg:
+    m.state = NotConnected
+    return m, tea.Batch(Close, textinput.Blink)
   }
 
   return m, tea.Batch(tiCmd, vpCmd) 

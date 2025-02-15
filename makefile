@@ -13,4 +13,4 @@ build_server :
 	clang server.c -o server
 
 clean : 
-	rm server client
+	rm -rf server client
