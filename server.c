@@ -24,8 +24,6 @@
 #include <netinet/in.h>
 #include <stdio.h>
 
-#define NFDS (sizeof fds / sizeof(fds[0]))
-
 #define SERVER 0      /* fds server idx */
 #define PORT 8080     /* listening port */
 #define IP INADDR_ANY /* all the listening addr */
@@ -56,7 +54,7 @@ int get_idx(){
 
 /* reset_pollfd: with an list fds and index inside this list reset the specific index */
 void reset_pollfd(int idx){
-  if(idx < 1 || idx > NFDS - 1)
+  if(idx < 1 || idx > (MAX_FD - 1))
     error_crit("idx is out of bound of fds");
 
   fds[idx].fd = 0;

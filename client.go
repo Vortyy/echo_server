@@ -1,24 +1,24 @@
 package main
 
 import (
-	"fmt"
+  "fmt"
   "net"
   "os"
   "time"
   "strings"
 
-	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/viewport"
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/lipgloss"
-	tea "github.com/charmbracelet/bubbletea"
+  "github.com/charmbracelet/bubbles/textarea"
+  "github.com/charmbracelet/bubbles/viewport"
+  "github.com/charmbracelet/bubbles/textinput"
+  "github.com/charmbracelet/bubbles/spinner"
+  "github.com/charmbracelet/lipgloss"
+  tea "github.com/charmbracelet/bubbletea"
 )
 
 /* Styling var */
 var (
   keywordStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("204")).Background(lipgloss.Color("235"))
-	helpStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+  helpStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
   foregroundStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("5"))
   spinnerStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("5"))
   errStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
@@ -30,28 +30,28 @@ var conn net.Conn
 
 /* client tui states */
 const (
-	NotConnected = 1 
-	Connecting = 2
-	Connected = 3
+  NotConnected = 1 
+  Connecting = 2
+  Connected = 3
   Closed = -1
 )
 
 type (
-	errMsg error
-	connectionMsg struct{} 
+  errMsg error
+  connectionMsg struct{} 
   recvMsg struct{msg string}
   closeMsg struct{}
 )
 
 /* model */
 type model struct {
-	state 	  int 
-	spinner   spinner.Model
-	textInput textinput.Model
+  state     int 
+  spinner   spinner.Model
+  textInput textinput.Model
   messages  []string
   viewport  viewport.Model
   textArea  textarea.Model
-	err       error
+  err       error
 }
 
 func main() { 
@@ -62,23 +62,23 @@ func main() {
   } ()
 
   p := tea.NewProgram(initialModel()) /* start bubbletea program */
-	if _, err := p.Run(); err != nil {
+  if _, err := p.Run(); err != nil {
     fmt.Printf("Got an error : %v\n", err);
     os.Exit(1)
-	}
+  }
 }
 
 func initialModel() model {
   /* NotConnected view */
-	ti := textinput.New()
-	ti.Placeholder = "localhost:8080"
-	ti.Focus()
-	ti.CharLimit = 156
-	ti.Width = 20
+  ti := textinput.New()
+  ti.Placeholder = "localhost:8080"
+  ti.Focus()
+  ti.CharLimit = 156
+  ti.Width = 20
 
   /* Connecting view */
-	sp := spinner.New()
-	sp.Spinner = spinner.Points
+  sp := spinner.New()
+  sp.Spinner = spinner.Points
   sp.Style = spinnerStyle
 
   /* Connected view */
@@ -97,20 +97,20 @@ func initialModel() model {
 
   vp := viewport.New(50, 5)
 
-	return model{
-		state:      NotConnected,
+  return model{
+    state:      NotConnected,
     messages:   []string{},
-		spinner:    sp,
-		textInput:  ti,
+    spinner:    sp,
+    textInput:  ti,
     viewport:   vp,
     textArea:   ta,
-		err:        nil,
-	}
+    err:        nil,
+  }
 }
 
 /* Connect : tries to establish a tcp connection with argument inside textInput */
 func Connect(m model) tea.Cmd {
-	return func() tea.Msg {
+  return func() tea.Msg {
     var err error
     conn, err = net.Dial("tcp", m.textInput.Value())
     if err != nil {
@@ -120,8 +120,8 @@ func Connect(m model) tea.Cmd {
     //Wait just to see the beautifull spinner :)
     time.Sleep(2 * time.Second)
 
-		return connectionMsg{} 
-	}
+    return connectionMsg{} 
+  }
 }
 
 /* Send : tries to send a msg to the server and wait/read for the response */
@@ -156,7 +156,7 @@ func Close() tea.Msg {
 }
 
 func (m model) Init() tea.Cmd {
-	return textinput.Blink
+  return textinput.Blink
 }
 
 /* Update func */
@@ -267,9 +267,9 @@ func updateConnected(msg tea.Msg, m model) (tea.Model, tea.Cmd){
 
 /* Main view */
 func (m model) View() string{
-	if(m.state == Connecting){
-		return ConnectingView(m)
-	}
+  if(m.state == Connecting){
+    return ConnectingView(m)
+  }
 
   if(m.state == Connected){
     return ConnectedView(m)
@@ -279,7 +279,7 @@ func (m model) View() string{
     return ClosingView() 
   }
 
-	return NotConnectedView(m)
+  return NotConnectedView(m)
 }
 
 func NotConnectedView(m model) string {
