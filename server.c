@@ -1,13 +1,15 @@
 /***************************************************************************
  * Echo Server
  *
- * Just simple echo server which handle multiple connection to learn 
- * Poll api provide by kernels to write a non-blocking IO application 
+ * Just simple echo server which handle multiple connections to learn 
+ * Poll api provide by the kernel to write a non-blocking IO applications 
  * In this example the server handles 4 clients simultanously (could handle 
- * lot more but i choose 4 'testing purpose')
+ * more but i choose 4 'testing purpose') and can be closed properly 
+ * with ctrl+c (or SIGINT)
  *
  * REF :
  * - man poll or io_during (called kqueue in BSD, IOCP in Windows) 
+ * - man sigaction
  **************************************************************************/
 
 #include <signal.h>
@@ -28,7 +30,7 @@
 #define PORT 8080     /* listening port */
 #define IP INADDR_ANY /* all the listening addr */
 #define BACKLOG 3     /* max pending connection to the socket */
-#define MAX_FD 2      /* max fd open and checked for poll */
+#define MAX_FD 5      /* max fd open and checked for poll (server + 4 clients) */
 
 struct pollfd fds[MAX_FD]; /* list of fd checked */
 static volatile sig_atomic_t keep_running = 1; /* boolean used in while loop for the server */
@@ -70,7 +72,7 @@ int main(int argc, char **argv){
 
   /* here (signo, act, oldact) -> oldact is usefull to keep the previous interruption 
    * action to be able to switch from the new one to old one in the program 
-   * (cf. https://stackoverflow.com/questions/3635221/what-is-the-use-of-second-structureoldact-in-sigaction */
+   * (cf. https://stackoverflow.com/questions/3635221/what-is-the-use-of-second-structureoldact-in-sigaction) */
   sigaction(SIGINT, &act, NULL);
 
   struct sockaddr_in addr = {.sin_family=AF_INET, .sin_addr=IP, .sin_port=htons(PORT)}; /* set my address */
