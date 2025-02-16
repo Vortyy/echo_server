@@ -1,11 +1,10 @@
 # Echo Server.c && Bubbletea client.go
 - **C server using Poll api** to handle multiple clients connections (non-blocking I/O)
 - **Go client using BubbleTea lib** to have a beautiful TUI
-- An explanation about Poll Api && BubbleTea
 
 <p align=center>
     <img src="img/client_working.gif" alt><br/>
-    <em>image_caption</em>
+    <em>Client simple usage</em>
 </p>
 
 ## How to build
@@ -35,10 +34,11 @@ To build the project follows the below steps
   ```
 
 ## Context
-Brief context, so this project started when i wanted to learn back socket in C using Poll Api provided by Kernels to do non-blocking I/O programs. Then after i've finished the server i wanted to implement a small fancy client to communicate with my freshly created server (just to use something else than telnet). I really wanted to do an app using the bubbletea lib (link) so i learned Go and made a TUI client using this lib. The client can be used with any server but just handle send then read operations.
-
-## Poll Api
-
-## BubbleTea
+Brief context, so this project started when i wanted to learn back socket in C using Poll Api provided by Kernels to do non-blocking I/O programs. Then, after i've finished the server i wanted to implement a small fancy client to communicate with my freshly created server (just to use something else than telnet). I really wanted to do an app using the bubbletea lib (link) so i learned Go and made a TUI client using this lib. The client can be used with any server but just handle send followed by a read operations.
 
 ## References
+- man poll
+- socket
+- bubbletea GH
+- charm.sh
+- golang room tour
