@@ -1,4 +1,4 @@
-# Echo Server.c && Bubbletea client.go
+# Echo Server.c && Bubbletea client.go (TCP)
 - **C server using Poll api** to handle multiple clients connections (non-blocking I/O)
 - **Go client using BubbleTea lib** to have a beautiful TUI
 
